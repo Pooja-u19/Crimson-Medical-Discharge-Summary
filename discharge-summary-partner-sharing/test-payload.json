@@ -1,0 +1,7 @@
+{
+  "httpMethod": "POST",
+  "body": "{\"files\":[{\"documentType\":\"other_documents\",\"contentType\":\"application/pdf\",\"size\":1024}]}",
+  "headers": {
+    "Content-Type": "application/json"
+  }
+}

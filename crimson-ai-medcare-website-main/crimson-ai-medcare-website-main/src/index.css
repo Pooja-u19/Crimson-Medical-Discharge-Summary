@@ -1,0 +1,181 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 220 15% 20%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 15% 20%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 15% 20%;
+
+    /* Crimson AI MedCare Brand Colors */
+    --primary: 348 83% 47%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 348 83% 60%;
+
+    --secondary: 210 70% 60%;
+    --secondary-foreground: 0 0% 100%;
+    --secondary-light: 210 70% 95%;
+
+    --muted: 220 13% 96%;
+    --muted-foreground: 220 10% 45%;
+
+    --accent: 210 70% 60%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 348 83% 47%;
+
+    --radius: 0.75rem;
+
+    /* Custom Design Tokens */
+    --gradient-primary: linear-gradient(135deg, hsl(348 83% 47%) 0%, hsl(348 83% 60%) 100%);
+    --gradient-secondary: linear-gradient(135deg, hsl(210 70% 60%) 0%, hsl(210 70% 75%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(348 83% 47% / 0.05) 0%, hsl(210 70% 60% / 0.05) 100%);
+    
+    --shadow-elegant: 0 10px 40px -10px hsl(348 83% 47% / 0.15);
+    --shadow-soft: 0 4px 20px hsl(220 13% 20% / 0.08);
+    --shadow-glow: 0 0 40px hsl(348 83% 60% / 0.2);
+    
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 220 20% 10%;
+    --foreground: 0 0% 98%;
+
+    --card: 220 20% 13%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 220 20% 13%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 348 83% 55%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 348 83% 65%;
+
+    --secondary: 210 70% 55%;
+    --secondary-foreground: 0 0% 100%;
+    --secondary-light: 210 70% 20%;
+
+    --muted: 220 15% 18%;
+    --muted-foreground: 220 10% 60%;
+
+    --accent: 210 70% 55%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 62.8% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 15% 20%;
+    --input: 220 15% 20%;
+    --ring: 348 83% 55%;
+
+    --gradient-primary: linear-gradient(135deg, hsl(348 83% 55%) 0%, hsl(348 83% 65%) 100%);
+    --gradient-secondary: linear-gradient(135deg, hsl(210 70% 55%) 0%, hsl(210 70% 70%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(348 83% 55% / 0.1) 0%, hsl(210 70% 55% / 0.1) 100%);
+    
+    --shadow-elegant: 0 10px 40px -10px hsl(348 83% 55% / 0.3);
+    --shadow-soft: 0 4px 20px hsl(0 0% 0% / 0.3);
+    --shadow-glow: 0 0 40px hsl(348 83% 65% / 0.3);
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    overflow-x: hidden;
+  }
+  
+  /* Remove any unwanted borders/lines */
+  hr, .border-t, .divide-y > * + * {
+    @apply border-transparent;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    overflow-x: hidden;
+  }
+}
+
+@layer utilities {
+  .gradient-primary {
+    background: var(--gradient-primary);
+  }
+  
+  .gradient-secondary {
+    background: var(--gradient-secondary);
+  }
+  
+  .gradient-hero {
+    background: var(--gradient-hero);
+  }
+  
+  .shadow-elegant {
+    box-shadow: var(--shadow-elegant);
+  }
+  
+  .shadow-soft {
+    box-shadow: var(--shadow-soft);
+  }
+  
+  .shadow-glow {
+    box-shadow: var(--shadow-glow);
+  }
+  
+  .transition-smooth {
+    transition: var(--transition-smooth);
+  }
+  
+  .transition-bounce {
+    transition: var(--transition-bounce);
+  }
+
+  .text-gradient {
+    @apply bg-clip-text text-transparent;
+    background-image: var(--gradient-primary);
+  }
+}

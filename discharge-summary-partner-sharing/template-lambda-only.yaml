@@ -1,0 +1,234 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: 'Lambda Functions Only - Document Processing Pipeline'
+
+Parameters:
+  ProjectName:
+    Description: Project name (e.g., discharge-summary)
+    Type: String
+    Default: discharge-summary
+
+  Environment:
+    Description: Environment (e.g., dev, prod)
+    Type: String
+    Default: dev
+
+  SummaryGenerationLambdaTimeout:
+    Type: Number
+    Default: "180"
+
+  SummaryGenerationLambdaMemory:
+    Type: Number
+    Default: "2048"
+
+  InitiateOCRFunctionBatchSize:
+    Type: Number
+    Default: "1"
+
+  GenerateSummaryFunctionBatchSize:
+    Type: Number
+    Default: "1"
+
+  InitiateOCRFunctionLambdaTimeout:
+    Type: Number
+    Default: "30"
+
+Resources:
+  # Lambda Functions
+  CreateRequestFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "${ProjectName}-${Environment}-create-request"
+      Handler: src/handlers/create-request.handler
+      Runtime: nodejs22.x
+      Timeout: 30
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:PutObject
+                - s3:GetObject
+                - s3:ListBucket
+              Resource:
+                - !Sub "arn:aws:s3:::${ProjectName}-${Environment}-docs-${AWS::AccountId}-${AWS::Region}/*"
+                - !Sub "arn:aws:s3:::${ProjectName}-${Environment}-docs-${AWS::AccountId}-${AWS::Region}"
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+              Resource:
+                - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ProjectName}-${Environment}-requests"
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:GenerateDataKey
+              Resource: 
+                - !Sub "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/4e39f2ad-38c0-4135-a9bd-1d8d52926d2d"
+      Environment:  
+        Variables:
+          DOCUMENTS_S3_BUCKET: !Sub "${ProjectName}-${Environment}-docs-${AWS::AccountId}-${AWS::Region}"
+          REQUESTS_DYNAMODB_TABLE: !Sub "${ProjectName}-${Environment}-requests"
+          KMS_KEY_ID: !Sub "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/4e39f2ad-38c0-4135-a9bd-1d8d52926d2d"
+
+  GetRequestFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "${ProjectName}-${Environment}-get-request"
+      Handler: src/handlers/get-request.handler
+      Runtime: nodejs22.x
+      Timeout: 30
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+                - dynamodb:GetItem
+                - s3:GetObject
+              Resource:
+                - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ProjectName}-${Environment}-documents"
+                - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ProjectName}-${Environment}-documents/index/RequestIdIndex"
+                - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ProjectName}-${Environment}-requests"
+                - !Sub "arn:aws:s3:::${ProjectName}-${Environment}-docs-${AWS::AccountId}-${AWS::Region}/*"
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:GenerateDataKey
+              Resource: 
+                - !Sub "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/4e39f2ad-38c0-4135-a9bd-1d8d52926d2d"
+      Environment:
+        Variables:
+          DOCUMENTS_DYNAMODB_TABLE: !Sub "${ProjectName}-${Environment}-documents"
+          DOCUMENTS_S3_BUCKET: !Sub "${ProjectName}-${Environment}-docs-${AWS::AccountId}-${AWS::Region}"
+          REQUESTS_DYNAMODB_TABLE: !Sub "${ProjectName}-${Environment}-requests"
+
+  InitiateOcrFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "${ProjectName}-${Environment}-initiate-ocr"
+      Handler: src/handlers/initiate-ocr.handler
+      Runtime: nodejs22.x
+      Timeout: !Ref InitiateOCRFunctionLambdaTimeout
+      Events:
+        SQSEvent:
+          Type: SQS
+          Properties:
+            Queue: !Sub "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${ProjectName}-${Environment}-processing-queue"
+            BatchSize: !Ref InitiateOCRFunctionBatchSize
+            Enabled: true
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:BatchWriteItem
+                - dynamodb:Query
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+                - dynamodb:Scan
+                - dynamodb:GetItem
+              Resource:
+                - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ProjectName}-${Environment}-documents"
+                - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ProjectName}-${Environment}-requests"
+            - Effect: Allow
+              Action:
+                - sns:Publish
+              Resource:
+                - !Sub "arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${ProjectName}-${Environment}-alerts"
+                - !Sub "arn:aws:sns:${AWS::Region}:${AWS::AccountId}:AmazonTextract-${ProjectName}-${Environment}-results"
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+                - s3:ListBucket
+              Resource:
+                - !Sub "arn:aws:s3:::${ProjectName}-${Environment}-docs-${AWS::AccountId}-${AWS::Region}/*"
+                - !Sub "arn:aws:s3:::${ProjectName}-${Environment}-docs-${AWS::AccountId}-${AWS::Region}"
+            - Effect: Allow
+              Action: iam:PassRole
+              Resource: !Sub "arn:aws:iam::${AWS::AccountId}:role/${ProjectName}-${Environment}-TextractServiceRole"
+              Condition:
+                StringEquals:
+                  iam:PassedToService: textract.amazonaws.com
+            - Effect: Allow
+              Action:
+                - textract:StartDocumentTextDetection
+              Resource: "*"
+            - Effect: Allow
+              Action:
+                - sqs:ReceiveMessage
+                - sqs:DeleteMessage
+                - sqs:GetQueueAttributes
+              Resource:
+                - !Sub "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${ProjectName}-${Environment}-processing-queue"
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:GenerateDataKey
+              Resource: 
+                - !Sub "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/4e39f2ad-38c0-4135-a9bd-1d8d52926d2d"
+      Environment:
+        Variables:
+          DOCUMENTS_DYNAMODB_TABLE: !Sub "${ProjectName}-${Environment}-documents"
+          DOCUMENTS_S3_BUCKET: !Sub "${ProjectName}-${Environment}-docs-${AWS::AccountId}-${AWS::Region}"
+          REQUESTS_DYNAMODB_TABLE: !Sub "${ProjectName}-${Environment}-requests"
+          NOTIFICATION_CHANNEL_ROLE_ARN: !Sub "arn:aws:iam::${AWS::AccountId}:role/${ProjectName}-${Environment}-TextractServiceRole"
+          NOTIFICATION_CHANNEL_SNS_TOPIC_ARN: !Sub "arn:aws:sns:${AWS::Region}:${AWS::AccountId}:AmazonTextract-${ProjectName}-${Environment}-results"
+          SNS_TOPIC_ARN: !Sub "arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${ProjectName}-${Environment}-alerts"
+
+  GenerateSummaryFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "${ProjectName}-${Environment}-generate-summary"
+      Handler: src/handlers/generate-summary.handler
+      Runtime: nodejs22.x
+      Timeout: !Ref SummaryGenerationLambdaTimeout
+      MemorySize: !Ref SummaryGenerationLambdaMemory
+      Events:
+        SqsTrigger:
+          Type: SQS
+          Properties:
+            Queue: !Sub "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${ProjectName}-${Environment}-textract-results"
+            BatchSize: !Ref GenerateSummaryFunctionBatchSize
+            Enabled: true
+      Policies:
+        - AmazonBedrockFullAccess
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:UpdateItem
+                - dynamodb:Query
+                - dynamodb:PutItem
+                - dynamodb:Scan
+                - dynamodb:GetItem
+              Resource:
+                - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ProjectName}-${Environment}-documents"
+                - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ProjectName}-${Environment}-documents/index/RequestIdIndex"
+                - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ProjectName}-${Environment}-documents/index/PatientIdIndex"
+                - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ProjectName}-${Environment}-requests"
+                - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ProjectName}-${Environment}-requests/index/PatientIdIndex"
+            - Effect: Allow
+              Action:
+                - sqs:ReceiveMessage
+                - sqs:DeleteMessage
+                - sqs:GetQueueAttributes
+              Resource:
+                - !Sub "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${ProjectName}-${Environment}-textract-results"
+            - Effect: Allow
+              Action:
+                - sns:Publish
+              Resource:
+                - !Sub "arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${ProjectName}-${Environment}-alerts"
+            - Effect: Allow
+              Action:
+                - textract:GetDocumentTextDetection
+              Resource: "*"
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:GenerateDataKey
+              Resource: 
+                - !Sub "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/4e39f2ad-38c0-4135-a9bd-1d8d52926d2d"
+      Environment:
+        Variables:
+          BEDROCK_MODEL_ID: "amazon.nova-lite-v1:0"
+          DOCUMENTS_S3_BUCKET: !Sub "${ProjectName}-${Environment}-docs-${AWS::AccountId}-${AWS::Region}"
+          DOCUMENTS_DYNAMODB_TABLE: !Sub "${ProjectName}-${Environment}-documents"
+          REQUESTS_DYNAMODB_TABLE: !Sub "${ProjectName}-${Environment}-requests"
+          SNS_TOPIC_ARN: !Sub "arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${ProjectName}-${Environment}-alerts"

@@ -1,0 +1,13 @@
+{
+  "name": "textract-processor",
+  "version": "1.0.0",
+  "description": "Lambda function to process Textract results",
+  "main": "textract-processor-lambda.js",
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "ajv-keywords": "^5.1.0",
+    "aws-sdk": "^2.1691.0",
+    "uuid": "^9.0.1",
+    "winston": "^3.11.0"
+  }
+}

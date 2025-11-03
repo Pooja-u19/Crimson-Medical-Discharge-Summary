@@ -1,0 +1,348 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: API Gateway CORS Configuration for Document Summary API
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    Description: Environment name
+  ProjectName:
+    Type: String
+    Default: document-summary
+    Description: Project name
+
+Resources:
+  # API Gateway with simplified CORS configuration
+  DocumentSummaryApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: !Ref Environment
+      Cors:
+        AllowMethods: "'GET,POST,PUT,OPTIONS'"
+        AllowHeaders: "'Content-Type,Authorization,x-api-key'"
+        AllowOrigin: "*"
+        AllowCredentials: false
+      Auth:
+        ApiKeyRequired: true
+      DefinitionBody:
+        swagger: "2.0"
+        info:
+          title: !Sub "${ProjectName}-${Environment}-api"
+          version: "1.0"
+        securityDefinitions:
+          api_key:
+            type: apiKey
+            name: x-api-key
+            in: header
+        paths:
+          /requests:
+            post:
+              security:
+                - api_key: []
+              x-amazon-apigateway-integration:
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateRequestFunction.Arn}/invocations"
+                httpMethod: POST
+                type: aws_proxy
+              responses:
+                '200':
+                  description: Success
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: string
+            get:
+              security:
+                - api_key: []
+              x-amazon-apigateway-integration:
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetRequestFunction.Arn}/invocations"
+                httpMethod: POST
+                type: aws_proxy
+              responses:
+                '200':
+                  description: Success
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: string
+            options:
+              x-amazon-apigateway-integration:
+                type: mock
+                requestTemplates:
+                  application/json: '{"statusCode": 200}'
+                responses:
+                  default:
+                    statusCode: 200
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Headers: "'Content-Type,Authorization,x-api-key'"
+                      method.response.header.Access-Control-Allow-Methods: "'GET,POST,PUT,OPTIONS'"
+                      method.response.header.Access-Control-Allow-Origin: "*"
+              responses:
+                '200':
+                  description: CORS support
+                  headers:
+                    Access-Control-Allow-Headers:
+                      type: string
+                    Access-Control-Allow-Methods:
+                      type: string
+                    Access-Control-Allow-Origin:
+                      type: string
+          /requests/{requestId}:
+            get:
+              security:
+                - api_key: []
+              parameters:
+                - name: requestId
+                  in: path
+                  required: true
+                  type: string
+              x-amazon-apigateway-integration:
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetRequestFunction.Arn}/invocations"
+                httpMethod: POST
+                type: aws_proxy
+              responses:
+                '200':
+                  description: Success
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: string
+            options:
+              parameters:
+                - name: requestId
+                  in: path
+                  required: true
+                  type: string
+              x-amazon-apigateway-integration:
+                type: mock
+                requestTemplates:
+                  application/json: '{"statusCode": 200}'
+                responses:
+                  default:
+                    statusCode: 200
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Headers: "'Content-Type,Authorization,x-api-key'"
+                      method.response.header.Access-Control-Allow-Methods: "'GET,POST,PUT,OPTIONS'"
+                      method.response.header.Access-Control-Allow-Origin: "*"
+              responses:
+                '200':
+                  description: CORS support
+                  headers:
+                    Access-Control-Allow-Headers:
+                      type: string
+                    Access-Control-Allow-Methods:
+                      type: string
+                    Access-Control-Allow-Origin:
+                      type: string
+          /requests/{requestId}/ocr:
+            post:
+              security:
+                - api_key: []
+              parameters:
+                - name: requestId
+                  in: path
+                  required: true
+                  type: string
+              x-amazon-apigateway-integration:
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${InitiateOCRFunction.Arn}/invocations"
+                httpMethod: POST
+                type: aws_proxy
+              responses:
+                '200':
+                  description: Success
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: string
+            options:
+              parameters:
+                - name: requestId
+                  in: path
+                  required: true
+                  type: string
+              x-amazon-apigateway-integration:
+                type: mock
+                requestTemplates:
+                  application/json: '{"statusCode": 200}'
+                responses:
+                  default:
+                    statusCode: 200
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Headers: "'Content-Type,Authorization,x-api-key'"
+                      method.response.header.Access-Control-Allow-Methods: "'GET,POST,PUT,OPTIONS'"
+                      method.response.header.Access-Control-Allow-Origin: "*"
+              responses:
+                '200':
+                  description: CORS support
+                  headers:
+                    Access-Control-Allow-Headers:
+                      type: string
+                    Access-Control-Allow-Methods:
+                      type: string
+                    Access-Control-Allow-Origin:
+                      type: string
+          /requests/{requestId}/summary:
+            post:
+              security:
+                - api_key: []
+              parameters:
+                - name: requestId
+                  in: path
+                  required: true
+                  type: string
+              x-amazon-apigateway-integration:
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GenerateSummaryFunction.Arn}/invocations"
+                httpMethod: POST
+                type: aws_proxy
+              responses:
+                '200':
+                  description: Success
+                  headers:
+                    Access-Control-Allow-Origin:
+                      type: string
+            options:
+              parameters:
+                - name: requestId
+                  in: path
+                  required: true
+                  type: string
+              x-amazon-apigateway-integration:
+                type: mock
+                requestTemplates:
+                  application/json: '{"statusCode": 200}'
+                responses:
+                  default:
+                    statusCode: 200
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Headers: "'Content-Type,Authorization,x-api-key'"
+                      method.response.header.Access-Control-Allow-Methods: "'GET,POST,PUT,OPTIONS'"
+                      method.response.header.Access-Control-Allow-Origin: "*"
+              responses:
+                '200':
+                  description: CORS support
+                  headers:
+                    Access-Control-Allow-Headers:
+                      type: string
+                    Access-Control-Allow-Methods:
+                      type: string
+                    Access-Control-Allow-Origin:
+                      type: string
+
+  # Lambda Functions
+  CreateRequestFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: document-summary-dev-create-request
+      CodeUri: ./lambda/create-request
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Environment:
+        Variables:
+          DOCUMENTS_BUCKET: discharge-summary-dev-documents-us-west-2-864981715036
+          REQUESTS_TABLE: document-summary-dev-requests
+      Policies:
+        - S3CrudPolicy:
+            BucketName: discharge-summary-dev-documents-us-west-2-864981715036
+        - DynamoDBCrudPolicy:
+            TableName: document-summary-dev-requests
+      Events:
+        CreateRequest:
+          Type: Api
+          Properties:
+            RestApiId: !Ref DocumentSummaryApi
+            Path: /requests
+            Method: POST
+
+  InitiateOCRFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: document-summary-dev-initiate-ocr
+      CodeUri: ./lambda/initiate-ocr
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Environment:
+        Variables:
+          DOCUMENTS_BUCKET: discharge-summary-dev-documents-us-west-2-864981715036
+          DOCUMENTS_TABLE: document-summary-dev-documents
+          REQUESTS_TABLE: document-summary-dev-requests
+      Policies:
+        - S3ReadPolicy:
+            BucketName: discharge-summary-dev-documents-us-west-2-864981715036
+        - DynamoDBCrudPolicy:
+            TableName: document-summary-dev-documents
+        - DynamoDBCrudPolicy:
+            TableName: document-summary-dev-requests
+        - Statement:
+            - Effect: Allow
+              Action:
+                - textract:StartDocumentTextDetection
+                - textract:GetDocumentTextDetection
+              Resource: '*'
+      Events:
+        InitiateOCR:
+          Type: Api
+          Properties:
+            RestApiId: !Ref DocumentSummaryApi
+            Path: /requests/{requestId}/ocr
+            Method: POST
+
+  GenerateSummaryFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: document-summary-dev-generate-summary
+      CodeUri: ./lambda/generate-summary
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Environment:
+        Variables:
+          DOCUMENTS_TABLE: document-summary-dev-documents
+          REQUESTS_TABLE: document-summary-dev-requests
+          BEDROCK_MODEL_ID: amazon.nova-lite-v1:0
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: document-summary-dev-documents
+        - DynamoDBCrudPolicy:
+            TableName: document-summary-dev-requests
+        - Statement:
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+              Resource: 'arn:aws:bedrock:us-east-1::foundation-model/amazon.nova-lite-v1:0'
+      Events:
+        GenerateSummary:
+          Type: Api
+          Properties:
+            RestApiId: !Ref DocumentSummaryApi
+            Path: /requests/{requestId}/summary
+            Method: POST
+
+  GetRequestFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: document-summary-dev-get-request
+      CodeUri: ./lambda/get-request
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Environment:
+        Variables:
+          REQUESTS_TABLE: document-summary-dev-requests
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: document-summary-dev-requests
+      Events:
+        GetRequest:
+          Type: Api
+          Properties:
+            RestApiId: !Ref DocumentSummaryApi
+            Path: /requests/{requestId}
+            Method: GET
+        ListRequests:
+          Type: Api
+          Properties:
+            RestApiId: !Ref DocumentSummaryApi
+            Path: /requests
+            Method: GET
+
+Outputs:
+  ApiUrl:
+    Description: "API Gateway endpoint URL"
+    Value: !Sub "https://${DocumentSummaryApi}.execute-api.${AWS::Region}.amazonaws.com/dev"
+  ApiKey:
+    Description: "API Key (store securely)"
+    Value: "eS0yz4iHrMDqxrewoNrJ9RVcQHfnWvknTvIntE00"
